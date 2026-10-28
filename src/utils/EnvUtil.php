@@ -29,7 +29,12 @@ class EnvUtil
             return $value;
         }
 
-        return PsyptUtil::decrypt($value);
+        try {
+            return PsyptUtil::decrypt($value);
+        } catch (\Exception) {
+            // 环境变量解密失败，原样返回
+            return $value;
+        }
     }
 
     /**
