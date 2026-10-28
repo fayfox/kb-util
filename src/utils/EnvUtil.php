@@ -38,14 +38,6 @@ class EnvUtil
     }
 
     /**
-     * 加密明文，返回可写入环境变量的 ENC(...)。
-     */
-    public static function encryptEnv(string $plaintext): string
-    {
-        return PsyptUtil::encrypt($plaintext);
-    }
-
-    /**
      * 配置文件加载时，Laravel 已写入 $_ENV，但 putenv 未必可用。
      */
     public static function readEnv(string $key): mixed
