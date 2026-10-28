@@ -2,8 +2,6 @@
 
 namespace Kuabound\Util\utils;
 
-use Throwable;
-
 /**
  * 读取环境变量。值为 ENC(...) 时调用 PsyptUtil 解密。
  *
@@ -31,11 +29,7 @@ class EnvUtil
             return $value;
         }
 
-        try {
-            return PsyptUtil::decrypt($value);
-        } catch (Throwable $exception) {
-            throw new \InvalidArgumentException('not found encrypt key', 0, $exception);
-        }
+        return PsyptUtil::decrypt($value);
     }
 
     /**
