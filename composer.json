@@ -1,7 +1,6 @@
 {
   "name": "faysoft/kbutils",
   "description": "公共工具类",
-  "version": "1.0.0",
   "type": "library",
   "license": "MIT",
   "authors": [
