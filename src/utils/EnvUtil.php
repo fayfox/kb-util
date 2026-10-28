@@ -5,16 +5,13 @@ namespace Kuabound\Util\utils;
 use Throwable;
 
 /**
- * 读取环境变量，并对 ENC(...) 密文加解密。
+ * 读取环境变量。值为 ENC(...) 时调用 PsyptUtil 解密。
  *
- * 明文直接返回，不要求加密 key；只有 ENC(...) 才使用 JASYPT_ENCRYPTOR_PASSWORD。
+ * 明文直接返回，不要求加密 key；只有 ENC(...) 才使用 PSYPT_ENCRYPTOR_PASSWORD。
  * 配置加载阶段 getenv 可能读不到 .env，因此同时看 $_ENV / $_SERVER。
  */
 class EnvUtil
 {
-    private const START_FLAG = 'ENC(';
-    private const END_FLAG = ')';
-
     /**
      * 按环境变量名读取配置并解密。
      * $envName 是环境变量名，不是密文，也不是加密密钥。
@@ -30,33 +27,23 @@ class EnvUtil
             return $default ?? '';
         }
 
-        if (!str_starts_with($value, self::START_FLAG) || !str_ends_with($value, self::END_FLAG)) {
+        if (!PsyptUtil::isEncrypted($value)) {
             return $value;
         }
 
         try {
-            $value = substr($value, strlen(self::START_FLAG), strlen($value));
-            $value = substr($value, 0, strlen($value) - strlen(self::END_FLAG));
-            $encryptKey = self::readEnv("JASYPT_ENCRYPTOR_PASSWORD");
-            if (empty($encryptKey)) {
-                throw new \InvalidArgumentException("not found encrypt key");
-            }
-            return AesCtr::decrypt($value, $encryptKey);
+            return PsyptUtil::decrypt($value);
         } catch (Throwable $exception) {
-            throw new \InvalidArgumentException("not found encrypt key", 0, $exception);
+            throw new \InvalidArgumentException('not found encrypt key', 0, $exception);
         }
     }
 
     /**
-     * 用 JASYPT_ENCRYPTOR_PASSWORD 加密明文，返回可写入环境变量的 ENC(...)。
+     * 加密明文，返回可写入环境变量的 ENC(...)。
      */
     public static function encryptEnv(string $plaintext): string
     {
-        $encryptKey = self::readEnv("JASYPT_ENCRYPTOR_PASSWORD");
-        if (!is_string($encryptKey) || $encryptKey === '') {
-            throw new \InvalidArgumentException("not found encrypt key");
-        }
-        return self::START_FLAG . AesCtr::encrypt($plaintext, $encryptKey) . self::END_FLAG;
+        return PsyptUtil::encrypt($plaintext);
     }
 
     /**

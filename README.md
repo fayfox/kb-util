@@ -2,7 +2,7 @@
 
 公共工具库，包名 `faysoft/kbutils`，命名空间 `Kuabound\Util`。
 
-提供环境变量读取与 `ENC(...)` 密文加解密、与 Java `AesCtrUtils` 兼容的 AES-256-CTR，以及一组业务异常。
+提供环境变量读取、`ENC(...)` 密文加解密、与 Java `AesCtrUtils` 兼容的 AES-256-CTR、带认证的 AES-256-GCM，以及一组业务异常。
 
 ## 要求
 
@@ -18,7 +18,7 @@ composer require faysoft/kbutils
 
 ## 环境变量
 
-`EnvUtil` 读取环境变量。明文原样返回；值为 `ENC(...)` 时，用 `JASYPT_ENCRYPTOR_PASSWORD` 解密。
+`EnvUtil` 读取环境变量。明文原样返回；值为 `ENC(...)` 时交给 `PsyptUtil` 解密。
 
 配置加载阶段 `getenv` 可能读不到 `.env`，因此依次查找 `getenv`、`$_ENV`、`$_SERVER`。
 
@@ -28,7 +28,7 @@ use Kuabound\Util\utils\EnvUtil;
 // 明文直接返回；未配置或为空时返回默认值
 $dbPassword = EnvUtil::decryptEnv('DB_PASSWORD', '');
 
-// 生成可写入 .env 的密文，需要已配置 JASYPT_ENCRYPTOR_PASSWORD
+// 生成可写入 .env 的密文，需要已配置 PSYPT_ENCRYPTOR_PASSWORD
 $cipher = EnvUtil::encryptEnv('plain-secret');
 // ENC(Base64Url密文)
 ```
@@ -36,11 +36,25 @@ $cipher = EnvUtil::encryptEnv('plain-secret');
 `.env` 示例：
 
 ```dotenv
-JASYPT_ENCRYPTOR_PASSWORD=base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PSYPT_ENCRYPTOR_PASSWORD=base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 DB_PASSWORD=ENC(密文)
 ```
 
-`JASYPT_ENCRYPTOR_PASSWORD` 支持 32 字节原文，或 `base64:` 前缀（解码后须为 32 字节）。密钥缺失、密文非法时抛出 `InvalidArgumentException`。
+`PSYPT_ENCRYPTOR_PASSWORD` 支持 32 字节原文，或 `base64:` 前缀（解码后须为 32 字节）。密钥缺失、密文非法时抛出 `InvalidArgumentException`。
+
+## ENC(...) 加解密
+
+`PsyptUtil` 用 `AesGcm` 处理 `ENC(...)` 加解密。密钥从 `PSYPT_ENCRYPTOR_PASSWORD` 读取。明文原样返回；加密结果可直接写入环境变量。同一明文每次结果不同，密文被删改时解密失败。此前用 `AesCtr` 生成的 `ENC(...)` 无法再用此方法解开。
+
+```php
+use Kuabound\Util\utils\PsyptUtil;
+
+$cipher = PsyptUtil::encrypt('plain-secret');
+// ENC(Base64Url密文)
+
+$plain = PsyptUtil::decrypt($cipher);
+$plain = PsyptUtil::decrypt('not-encrypted'); // 明文原样返回
+```
 
 ## AES-256-CTR
 
@@ -64,6 +78,28 @@ $payload = AesCtr::encrypt('hello', $key);
 ```
 
 密钥长度不是 32 字节，或加解密失败时抛出 `InvalidArgumentException`。
+
+## AES-256-GCM
+
+`AesGcm` 是带认证的加密。CTR 没有认证标签，删改密文后仍能解出被截短或篡改的明文；GCM 会校验标签，密文少一位、多一位或改一位都会解密失败。
+
+- 算法：AES-256-GCM，认证标签 16 字节
+- 密文：`Base64Url(IV(12) ‖ Tag(16) ‖ CipherText)`
+- IV 每次随机生成，同一明文每次加密结果不同
+
+不传 key 时读取环境变量 `AES_GCM_KEY`。`ENC(...)` 也使用 `AesGcm`，但密钥来自 `PSYPT_ENCRYPTOR_PASSWORD`。
+
+```php
+use Kuabound\Util\utils\AesGcm;
+
+$payload = AesGcm::encrypt('hello');
+$plain = AesGcm::decrypt($payload);
+
+// 指定 key（32 字节，或 base64: 前缀）
+$payload = AesGcm::encrypt('hello', $key);
+```
+
+密钥长度不是 32 字节、密文被篡改，或加解密失败时抛出 `InvalidArgumentException`。
 
 ## 异常
 

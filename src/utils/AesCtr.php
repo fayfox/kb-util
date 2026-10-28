@@ -36,6 +36,11 @@ class AesCtr
         return $key;
     }
 
+    /**
+     * 加密明文，返回 Base64URL 密文。同一明文每次结果相同。
+     *
+     * @param string|null $key 32 字节原文，或 base64: 前缀；不传则读 AES_CTR_KEY
+     */
     public static function encrypt(string $plaintext, ?string $key = null): string
     {
         $key = self::key($key);
@@ -52,13 +57,18 @@ class AesCtr
             throw new \InvalidArgumentException('encrypt failed');
         }
 
-        return self::base64UrlEncode($nonce . $ciphertext);
+        return Base64Util::encodeUrl($nonce . $ciphertext);
     }
 
+    /**
+     * 解密 Base64URL 密文。
+     *
+     * @param string|null $key 32 字节原文，或 base64: 前缀；不传则读 AES_CTR_KEY
+     */
     public static function decrypt(string $payload, ?string $key = null): string
     {
         $key = self::key($key);
-        $raw = self::base64UrlDecode($payload);
+        $raw = Base64Util::decodeUrl($payload);
         if ($raw === false || strlen($raw) < self::NONCE_LEN) {
             throw new \InvalidArgumentException('invalid payload');
         }
@@ -87,20 +97,5 @@ class AesCtr
     private static function iv(string $nonce): string
     {
         return $nonce . str_repeat("\0", self::IV_LEN - self::NONCE_LEN);
-    }
-
-    private static function base64UrlEncode(string $raw): string
-    {
-        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
-    }
-
-    private static function base64UrlDecode(string $payload): string|false
-    {
-        $payload = strtr($payload, '-_', '+/');
-        $pad = strlen($payload) % 4;
-        if ($pad > 0) {
-            $payload .= str_repeat('=', 4 - $pad);
-        }
-        return base64_decode($payload, true);
     }
 }

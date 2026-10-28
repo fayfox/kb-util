@@ -12,8 +12,8 @@ class ApiException extends \RuntimeException
     private string $apiMsg;
 
     /**
-     * @param int $code
-     * @param string $apiMsg
+     * @param int $code 业务状态码
+     * @param string $apiMsg 提示文案
      */
     public function __construct(int $code, string $apiMsg)
     {
@@ -22,11 +22,17 @@ class ApiException extends \RuntimeException
         $this->apiMsg = $apiMsg;
     }
 
+    /**
+     * 返回业务状态码。
+     */
     public function getApiCode(): int
     {
         return $this->apiCode;
     }
 
+    /**
+     * 返回业务提示文案。
+     */
     public function getApiMsg(): string
     {
         return $this->apiMsg;
