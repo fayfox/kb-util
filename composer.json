@@ -1,0 +1,22 @@
+{
+  "name": "faysoft/kbutils",
+  "description": "公共工具类",
+  "version": "1.0.0",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "fayfox"
+    }
+  ],
+  "require": {
+    "php": "^8.0",
+    "ext-openssl": "*",
+    "laravel/framework": "^9.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Kuabound\\Util\\": "src/"
+    }
+  }
+}
